@@ -2,6 +2,7 @@
 var url = window.location.href;
 var swLocation = '/twittor/sw.js';
 
+var swReg;
 
 if ( navigator.serviceWorker ) {
 
@@ -11,7 +12,17 @@ if ( navigator.serviceWorker ) {
     }
 
 
-    navigator.serviceWorker.register( swLocation );
+    window.addEventListener('load', function() {
+
+        navigator.serviceWorker.register( swLocation ).then( function(reg){
+
+            swReg = reg;
+            swReg.pushManager.getSubscription().then( verificaSuscripcion );
+
+        });
+
+    });
+
 }
 
 
@@ -33,13 +44,16 @@ var modalAvatar = $('#modal-avatar');
 var avatarBtns  = $('.seleccion-avatar');
 var txtMensaje  = $('#txtMensaje');
 
+var btnActivadas    = $('.btn-noti-activadas');
+var btnDesactivadas = $('.btn-noti-desactivadas');
+
 // El usuario, contiene el ID del hÃ©roe seleccionado
 var usuario;
 
 
 
 
-// ===== Codigo de la aplicaciÃ³n
+// ===== Codigo de la aplicación
 
 function crearMensajeHTML(mensaje, personaje) {
 
@@ -118,6 +132,7 @@ nuevoBtn.on('click', function() {
 
 });
 
+
 // Boton de cancelar mensaje
 cancelarBtn.on('click', function() {
     if ( !modal.hasClass('oculto') ) {
@@ -139,57 +154,214 @@ postBtn.on('click', function() {
         cancelarBtn.click();
         return;
     }
-    var data={
-        mensaje:mensaje,
-        user:usuario
-    }
-    fetch('api',{
-        method:'POST',
-        headers:{
-            'Content-Type':'application/json'
+
+    var data = {
+        mensaje: mensaje,
+        user: usuario
+    };
+
+
+    fetch('api', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
         },
-        body:JSON.stringify(data)
+        body: JSON.stringify( data )
     })
-    .then(res=>res.json())
-    .then(rta=>{
-        console.log('app.js',rta);
-    })
-    .catch(err=>console.log('app.js error',err));
+    .then( res => res.json() )
+    .then( res => console.log( 'app.js', res ))
+    .catch( err => console.log( 'app.js error:', err ));
+
+
+
     crearMensajeHTML( mensaje, usuario );
 
 });
 
 
-//Obtener mensajes del servidor
 
-function getMensajes(){
+// Obtener mensajes del servidor
+function getMensajes() {
+
     fetch('api')
-    .then(rta => rta.json())
-    .then(posts=>{
-        console.log(posts);
-        posts.forEach(post => {
-            crearMensajeHTML(post.mensaje, post.user);
+        .then( res => res.json() )
+        .then( posts => {
+
+            console.log(posts);
+            posts.forEach( post =>
+                crearMensajeHTML( post.mensaje, post.user ));
+
+
         });
-    })
+
+
 }
 
 getMensajes();
 
 
-// detectar cambios de conexion
 
-function isOnline(){
+// Detectar cambios de conexión
+function isOnline() {
 
-    if(navigator.onLine){
-        //Tenemos conexion
+    if ( navigator.onLine ) {
+        // tenemos conexión
+        // console.log('online');
+        $.mdtoast('Online', {
+            interaction: true,
+            interactionTimeout: 1000,
+            actionText: 'OK!'
+        });
 
-        console.log('online');
-    }else{
-        //No tenemos conexion
-        console.log('offline');
 
+    } else{
+        // No tenemos conexión
+        $.mdtoast('Offline', {
+            interaction: true,
+            actionText: 'OK',
+            type: 'warning'
+        });
     }
+
 }
 
-window.addEventListener('online', isOnline);
-window.addEventListener('offline', isOnline);
+window.addEventListener('online', isOnline );
+window.addEventListener('offline', isOnline );
+
+isOnline();
+
+
+// Notificaciones
+function verificaSuscripcion( activadas ) {
+
+    if ( activadas ) {
+        
+        btnActivadas.removeClass('oculto');
+        btnDesactivadas.addClass('oculto');
+
+    } else {
+        btnActivadas.addClass('oculto');
+        btnDesactivadas.removeClass('oculto');
+    }
+
+}
+
+
+
+function enviarNotificacion() {
+
+    const notificationOpts = {
+        body: 'Este es el cuerpo de la notificación',
+        icon: 'img/icons/icon-72x72.png'
+    };
+
+
+    const n = new Notification('Hola Mundo', notificationOpts);
+
+    n.onclick = () => {
+        console.log('Click');
+    };
+
+}
+
+
+function notificarme() {
+
+    if ( !window.Notification ) {
+        console.log('Este navegador no soporta notificaciones');
+        return;
+    }
+
+    if ( Notification.permission === 'granted' ) {
+        
+        // new Notification('Hola Mundo! - granted');
+        enviarNotificacion();
+
+    } else if ( Notification.permission !== 'denied' || Notification.permission === 'default' )  {
+
+        Notification.requestPermission( function( permission ) {
+
+            console.log( permission );
+
+            if ( permission === 'granted' ) {
+                // new Notification('Hola Mundo! - pregunta');
+                enviarNotificacion();
+            }
+
+        });
+
+    }
+
+
+
+}
+
+// notificarme();
+
+
+// Get Key
+function getPublicKey() {
+
+    // fetch('api/key')
+    //     .then( res => res.text())
+    //     .then( console.log );
+
+    return fetch('api/key')
+        .then( res => res.arrayBuffer())
+        // returnar arreglo, pero como un Uint8array
+        .then( key => new Uint8Array(key) );
+
+
+}
+
+// getPublicKey().then( console.log );
+btnDesactivadas.on( 'click', function() {
+
+    if ( !swReg ) return console.log('No hay registro de SW');
+
+    getPublicKey().then( function( key ) {
+
+        swReg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: key
+        })
+        .then( res => res.toJSON() )
+        .then( suscripcion => {
+
+            // console.log(suscripcion);
+            fetch('api/subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify( suscripcion )
+            })
+            .then( verificaSuscripcion )
+            .catch( cancelarSuscripcion );
+
+
+        });
+
+
+    });
+
+
+});
+
+
+
+function cancelarSuscripcion() {
+
+    swReg.pushManager.getSubscription().then( subs => {
+
+        subs.unsubscribe().then( () =>  verificaSuscripcion(false) );
+
+    });
+
+
+}
+
+btnActivadas.on( 'click', function() {
+
+    cancelarSuscripcion();
+
+
+});
