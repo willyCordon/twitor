@@ -1,12 +1,17 @@
-var url= window.location.href;
-var swLocation='/twitor/sw.js';
 
-if(navigator.serviceWorker){
+var url = window.location.href;
+var swLocation = '/twittor/sw.js';
 
-    if(url.includes('localhost')){
-        swLocation='sw.js'
+
+if ( navigator.serviceWorker ) {
+
+
+    if ( url.includes('localhost') ) {
+        swLocation = '/sw.js';
     }
-    navigator.serviceWorker.register('sw.js');
+
+
+    navigator.serviceWorker.register( swLocation );
 }
 
 
@@ -28,13 +33,13 @@ var modalAvatar = $('#modal-avatar');
 var avatarBtns  = $('.seleccion-avatar');
 var txtMensaje  = $('#txtMensaje');
 
-// El usuario, contiene el ID del héroe seleccionado
+// El usuario, contiene el ID del hÃ©roe seleccionado
 var usuario;
 
 
 
 
-// ===== Codigo de la aplicación
+// ===== Codigo de la aplicaciÃ³n
 
 function crearMensajeHTML(mensaje, personaje) {
 
@@ -115,13 +120,15 @@ nuevoBtn.on('click', function() {
 
 // Boton de cancelar mensaje
 cancelarBtn.on('click', function() {
-   modal.animate({ 
-       marginTop: '+=1000px',
-       opacity: 0
-    }, 200, function() {
-        modal.addClass('oculto');
-        txtMensaje.val('');
-    });
+    if ( !modal.hasClass('oculto') ) {
+        modal.animate({ 
+            marginTop: '+=1000px',
+            opacity: 0
+         }, 200, function() {
+             modal.addClass('oculto');
+             txtMensaje.val('');
+         });
+    }
 });
 
 // Boton de enviar mensaje
@@ -132,7 +139,57 @@ postBtn.on('click', function() {
         cancelarBtn.click();
         return;
     }
-
+    var data={
+        mensaje:mensaje,
+        user:usuario
+    }
+    fetch('api',{
+        method:'POST',
+        headers:{
+            'Content-Type':'application/json'
+        },
+        body:JSON.stringify(data)
+    })
+    .then(res=>res.json())
+    .then(rta=>{
+        console.log('app.js',rta);
+    })
+    .catch(err=>console.log('app.js error',err));
     crearMensajeHTML( mensaje, usuario );
 
 });
+
+
+//Obtener mensajes del servidor
+
+function getMensajes(){
+    fetch('api')
+    .then(rta => rta.json())
+    .then(posts=>{
+        console.log(posts);
+        posts.forEach(post => {
+            crearMensajeHTML(post.mensaje, post.user);
+        });
+    })
+}
+
+getMensajes();
+
+
+// detectar cambios de conexion
+
+function isOnline(){
+
+    if(navigator.onLine){
+        //Tenemos conexion
+
+        console.log('online');
+    }else{
+        //No tenemos conexion
+        console.log('offline');
+
+    }
+}
+
+window.addEventListener('online', isOnline);
+window.addEventListener('offline', isOnline);
