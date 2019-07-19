@@ -5,7 +5,7 @@ const path = require('path');
 const app = express();
 
 const publicPath = path.resolve(__dirname, '../public');
-const port = process.env.PORT || 3000;
+const port = 'https://willycordon.github.io/twitor/';
 
 app.use(bodyParser.json()); // support json encoded bodies
 app.use(bodyParser.urlencoded({ extended: true })); // support encoded bodies
@@ -15,7 +15,7 @@ app.use(express.static(publicPath));
 
 // Rutas 
 const routes = require('./routes');
-app.use('https://willycordon.github.io/twitor/api', routes );
+app.use('/api', routes );
 
 
 

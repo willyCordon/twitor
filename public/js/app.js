@@ -163,7 +163,7 @@ postBtn.on('click', function() {
 //Obtener mensajes del servidor
 
 function getMensajes(){
-    fetch('https://willycordon.github.io/twitor/api')
+    fetch('api')
     .then(rta => rta.json())
     .then(posts=>{
         console.log(posts);
