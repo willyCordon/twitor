@@ -2,7 +2,7 @@
     "maxerr"        : 50,
     "bitwise"       : true,
     "camelcase"     : false,
-    "curly"         : false,
+    "curly"         : true,
     "eqeqeq"        : true,
     "forin"         : true,
     "freeze"        : true,
@@ -69,13 +69,9 @@
     "wsh"           : false,
     "yui"           : false,
     "globals"       : {
-        "self"     : true,
-        "__dirname": true,
-        "caches"   : true,
-        "require"  : true,
-        "module"   : true,
-        "process"  : true,
-        "$"        : true,
-        "clients"  : true
+        "$"     : true,
+        "self"  : true,
+        "caches": true,
+        "importScripts": true
     }
 }
